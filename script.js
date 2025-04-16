@@ -1,103 +1,43 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Get DOM elements
-    const searchInput = document.getElementById('searchInput');
-    const searchButton = document.getElementById('searchButton');
-    const resultsContainer = document.getElementById('resultsContainer');
-    const loader = document.getElementById('loader');
-    const noResults = document.getElementById('noResults');
-
-    // Add event listeners
-    searchButton.addEventListener('click', performSearch);
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performSearch();
-        }
-    });
-
-    // Focus the search input on page load
-    searchInput.focus();
-
-    // Function to perform the search
-    function performSearch() {
-        const searchTerm = searchInput.value.trim();
-        
-        if (searchTerm === '') {
-            alert('Please enter a search term');
-            return;
-        }
-
-        // Show loader and hide previous results
-        loader.style.display = 'block';
-        resultsContainer.innerHTML = '';
-        noResults.style.display = 'none';
-
-        // Fetch universities data from API
-        fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(searchTerm)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Hide loader
-                loader.style.display = 'none';
-
-                // Check if we got any results
-                if (data.length === 0) {
-                    noResults.style.display = 'block';
-                    return;
-                }
-
-                // Display results
-                displayResults(data);
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                loader.style.display = 'none';
-                resultsContainer.innerHTML = `
-                    <div class="error-message">
-                        An error occurred while fetching data. Please try again later.
-                    </div>
-                `;
-            });
+document.getElementById('searchButton').addEventListener('click', () => {
+    const rawQuery = document.getElementById('searchInput').value.trim();
+  
+    if (rawQuery === "") {
+      alert("Please enter a university name.");
+      return;
     }
-
-    // Function to display the results
-    function displayResults(universities) {
-        universities.forEach(university => {
-            const card = document.createElement('div');
-            card.className = 'university-card';
-
-            // Create university information HTML
-            card.innerHTML = `
-            <div class="university-name">${university.name}</div>
-            <div class="university-details">
-                <div class="university-detail">
-                    <div class="detail-label">Country:</div>
-                    <div>${university.country}</div>
-                </div>
-                <div class="university-detail">
-                    <div class="detail-label">State/Province:</div>
-                    <div>${university.state_province || 'N/A'}</div>
-                </div>
-                <div class="university-detail">
-                    <div class="detail-label">Alpha Code:</div>
-                    <div>${university.alpha_two_code}</div>
-                </div>
-                ${university.domains?.length > 0 ? `
-                <div class="university-detail">
-                    <div class="detail-label">Domain:</div>
-                    <div>${university.domains[0]}</div>
-                </div>
-                ` : ''}
-            </div>
-            ${university.web_pages?.length > 0 ? `
-            <a href="${university.web_pages[0]}" class="university-website" target="_blank">Visit Website</a>
-            ` : ''}
-        `;
-            // Add the card to the results container
-            resultsContainer.appendChild(card);
+  
+    const query = encodeURIComponent(rawQuery);
+  
+    fetch(`http://universities.hipolabs.com/search?name=${query}`)
+      .then(response => response.json())
+      .then(data => {
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = "";
+  
+        // Filter results in JS just in case API gives broader results
+        const filteredData = data.filter(uni => 
+          uni.name.toLowerCase().includes(rawQuery.toLowerCase())
+        );
+  
+        if (filteredData.length === 0) {
+          container.innerHTML = "<p>No universities found matching your search.</p>";
+          return;
+        }
+  
+        filteredData.forEach(uni => {
+          const card = document.createElement('div');
+          card.className = "result-card";
+          card.innerHTML = `
+            <h3>${uni.name}</h3>
+            <p><strong>Country:</strong> ${uni.country}</p>
+            <p><strong>Website:</strong> <a href="${uni.web_pages[0]}" target="_blank">${uni.web_pages[0]}</a></p>
+          `;
+          container.appendChild(card);
         });
-    }
-});
+      })
+      .catch(error => {
+        document.getElementById('resultsContainer').innerHTML = "<p>Error fetching data.</p>";
+        console.error('Error:', error);
+      });
+  });
+  
